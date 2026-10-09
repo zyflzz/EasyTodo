@@ -1,0 +1,216 @@
+/* ============================================================
+   EasyTodo · base.css
+   重置样式 · 设计令牌 · 莫兰迪主题（4 明 2 暗）
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+  transition: background-color .35s ease, color .35s ease;
+}
+
+h1, h2, h3, p, figure { margin: 0; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+input { outline: 0; }
+svg { display: block; }
+i { font-style: normal; }
+
+::selection { background: var(--accent-soft); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- 全局令牌 ---------- */
+:root {
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+  --radius-s: 8px;
+  --radius: 12px;
+  --radius-l: 16px;
+  --dur: .22s;
+  --ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+/* ---------- 莫兰迪主题 ---------- */
+
+/* 亚麻米（默认 · 明） */
+:root, [data-theme="linen"] {
+  color-scheme: light;
+  --bg: #F2EFE9;
+  --surface: #FAF8F4;
+  --surface-2: #EAE6DE;
+  --border: #E2DDD2;
+  --border-strong: #CFC7B8;
+  --text: #3D3935;
+  --text-2: #7C756B;
+  --text-3: #A79E92;
+  --accent: #8A7A6D;
+  --on-accent: #FAF8F4;
+  --accent-soft: rgba(138, 122, 109, .12);
+  --danger: #B5736C;
+  --c1: #C4A6A2; --c2: #A6B09B; --c3: #9DB0BC; --c4: #B0A4B6; --c5: #CDB894; --c6: #C69B80;
+  --glow-1: rgba(196, 166, 162, .24);
+  --glow-2: rgba(157, 176, 188, .20);
+  --shadow-1: 0 1px 2px rgba(61,57,53,.04), 0 6px 24px -10px rgba(61,57,53,.14);
+  --shadow-2: 0 16px 48px -12px rgba(61,57,53,.28);
+}
+
+/* 豆沙粉（明） */
+[data-theme="rose"] {
+  color-scheme: light;
+  --bg: #F3EDEB;
+  --surface: #FBF7F5;
+  --surface-2: #EBE0DC;
+  --border: #E6D9D4;
+  --border-strong: #D4C0BA;
+  --text: #43393A;
+  --text-2: #867371;
+  --text-3: #AC9A96;
+  --accent: #AC7F7C;
+  --on-accent: #FBF7F5;
+  --accent-soft: rgba(172, 127, 124, .13);
+  --danger: #B5736C;
+  --c1: #C4A0A0; --c2: #A9B0A1; --c3: #9DAEBE; --c4: #B1A2B8; --c5: #D2BC97; --c6: #C89B84;
+  --glow-1: rgba(196, 160, 160, .26);
+  --glow-2: rgba(205, 188, 151, .18);
+  --shadow-1: 0 1px 2px rgba(67,57,58,.04), 0 6px 24px -10px rgba(67,57,58,.14);
+  --shadow-2: 0 16px 48px -12px rgba(67,57,58,.28);
+}
+
+/* 鼠尾草（明） */
+[data-theme="sage"] {
+  color-scheme: light;
+  --bg: #EEF1EC;
+  --surface: #F8FAF6;
+  --surface-2: #E1E7DC;
+  --border: #DCE2D4;
+  --border-strong: #C6CFC0;
+  --text: #3A4034;
+  --text-2: #77816F;
+  --text-3: #9DA694;
+  --accent: #75886F;
+  --on-accent: #F8FAF6;
+  --accent-soft: rgba(117, 136, 111, .13);
+  --danger: #B5736C;
+  --c1: #C2A3A0; --c2: #A3B295; --c3: #98AEBD; --c4: #AC9FB6; --c5: #C9B78E; --c6: #C09B7F;
+  --glow-1: rgba(163, 178, 149, .26);
+  --glow-2: rgba(157, 176, 188, .16);
+  --shadow-1: 0 1px 2px rgba(58,64,52,.04), 0 6px 24px -10px rgba(58,64,52,.14);
+  --shadow-2: 0 16px 48px -12px rgba(58,64,52,.28);
+}
+
+/* 晨雾蓝（明） */
+[data-theme="mist"] {
+  color-scheme: light;
+  --bg: #EEF0F2;
+  --surface: #F9FAFB;
+  --surface-2: #E3E7EB;
+  --border: #DDE2E7;
+  --border-strong: #C9D1D8;
+  --text: #363B41;
+  --text-2: #737C85;
+  --text-3: #9AA3AC;
+  --accent: #7C8FA0;
+  --on-accent: #F9FAFB;
+  --accent-soft: rgba(124, 143, 160, .13);
+  --danger: #B5736C;
+  --c1: #C2A3A0; --c2: #A3B295; --c3: #9DB0BC; --c4: #AC9FB6; --c5: #C9B78E; --c6: #C09B7F;
+  --glow-1: rgba(157, 176, 188, .26);
+  --glow-2: rgba(196, 166, 162, .16);
+  --shadow-1: 0 1px 2px rgba(54,59,65,.04), 0 6px 24px -10px rgba(54,59,65,.14);
+  --shadow-2: 0 16px 48px -12px rgba(54,59,65,.28);
+}
+
+/* 夜 · 墨（暗 · 暖炭） */
+[data-theme="ink"] {
+  color-scheme: dark;
+  --bg: #232227;
+  --surface: #2B2A30;
+  --surface-2: #34333A;
+  --border: #3A3941;
+  --border-strong: #4C4B55;
+  --text: #E8E4DC;
+  --text-2: #A8A29A;
+  --text-3: #7B756D;
+  --accent: #A8988A;
+  --on-accent: #232227;
+  --accent-soft: rgba(168, 152, 138, .16);
+  --danger: #C98D86;
+  --c1: #B58F8B; --c2: #93A28B; --c3: #8AA0B0; --c4: #9C8FA6; --c5: #B4A17F; --c6: #B28A6E;
+  --glow-1: rgba(181, 143, 139, .09);
+  --glow-2: rgba(138, 160, 176, .09);
+  --shadow-1: 0 1px 2px rgba(0,0,0,.30), 0 8px 28px -10px rgba(0,0,0,.42);
+  --shadow-2: 0 18px 52px -12px rgba(0,0,0,.60);
+}
+
+/* 夜 · 雾蓝（暗 · 冷调） */
+[data-theme="ocean"] {
+  color-scheme: dark;
+  --bg: #20242B;
+  --surface: #282D36;
+  --surface-2: #313844;
+  --border: #38404C;
+  --border-strong: #4B5563;
+  --text: #E2E6EA;
+  --text-2: #9AA5B1;
+  --text-3: #6F7A87;
+  --accent: #8FA3B3;
+  --on-accent: #20242B;
+  --accent-soft: rgba(143, 163, 179, .16);
+  --danger: #C98D86;
+  --c1: #B08A88; --c2: #90A48F; --c3: #88A0B4; --c4: #9A8DA8; --c5: #B0A07E; --c6: #B08566;
+  --glow-1: rgba(136, 160, 180, .11);
+  --glow-2: rgba(176, 138, 136, .08);
+  --shadow-1: 0 1px 2px rgba(0,0,0,.30), 0 8px 28px -10px rgba(0,0,0,.42);
+  --shadow-2: 0 18px 52px -12px rgba(0,0,0,.60);
+}
+
+/* 背景氛围光 */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(640px 320px at 88% -60px, var(--glow-1), transparent 70%),
+    radial-gradient(560px 300px at -80px 24%, var(--glow-2), transparent 70%);
+}
+
+/* 主题切换时的全局颜色过渡 */
+body.theming, body.theming *, body.theming *::before, body.theming *::after {
+  transition: background-color .35s ease, color .35s ease,
+              border-color .35s ease, box-shadow .35s ease, fill .35s ease, stroke .35s ease !important;
+}
+
+/* 动效减弱 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

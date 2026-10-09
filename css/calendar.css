@@ -1,0 +1,293 @@
+/* ============================================================
+   EasyTodo · calendar.css
+   周视图 · 月视图 · 年视图
+   ============================================================ */
+
+/* ============ 周视图 ============ */
+.week-scroller { overflow-x: auto; padding-bottom: 6px; }
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  min-width: 860px;
+}
+
+.wcol {
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+  transition: border-color var(--dur), box-shadow var(--dur);
+}
+.wcol.today {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-1);
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
+
+.wcol-h {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 11px 13px 9px;
+  border-bottom: 1px solid var(--border);
+}
+.wcol.today .wcol-h { border-bottom-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.wcol-h .wd { font-size: 12px; color: var(--text-3); }
+.wcol-h .wnum {
+  font-size: 16px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.wcol.today .wnum { color: var(--accent); }
+.wcol-h .wcnt {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.wcol-b {
+  flex: 1;
+  overflow-y: auto;
+  padding: 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  transition: filter .15s, background-color .15s;
+}
+.chip:hover { filter: brightness(.97); }
+.chip .cdot {
+  flex: none;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--cc, var(--accent));
+  transition: background-color .3s;
+}
+.chip .ctext {
+  font-size: 12.6px;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color .3s;
+}
+.chip.done { background: transparent; }
+.chip.done .cdot { background: var(--text-3); }
+.chip.done .ctext {
+  color: var(--text-3);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.wcol-empty {
+  padding: 14px 0;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 11.5px;
+  opacity: .7;
+}
+
+.wcol-f {
+  padding: 8px;
+  border-top: 1px dashed var(--border);
+  color: var(--text-3);
+  font-size: 12px;
+  text-align: center;
+  transition: color var(--dur), background-color var(--dur);
+}
+.wcol-f:hover { color: var(--accent); background: var(--accent-soft); }
+
+/* ============ 月视图 ============ */
+.weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.weekdays span {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+  user-select: none;
+}
+
+.month {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.mcell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 108px;
+  padding: 8px 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color var(--dur), box-shadow var(--dur), transform .15s var(--ease);
+}
+.mcell:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-1);
+}
+.mcell:active { transform: scale(.985); }
+.mcell.out { opacity: .42; }
+.mcell.today {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+}
+
+.mcell-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.mnum {
+  width: 23px;
+  height: 23px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 12.5px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.mcell.today .mnum {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 650;
+}
+.mmore {
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.mchips {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow: hidden;
+}
+.mchip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11.8px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.mchip i {
+  flex: none;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--cc, var(--accent));
+  transition: background-color .3s;
+}
+.mchip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color .3s;
+}
+.mchip.done span {
+  color: var(--text-3);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.mchip.done i { background: var(--text-3); }
+
+/* 移动端指示点（配合 media query 显示） */
+.mdots { display: none; gap: 4px; flex-wrap: wrap; margin-top: auto; }
+.mdots i {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--cc, var(--accent));
+}
+
+/* ============ 年视图 ============ */
+.year-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+  gap: 12px;
+}
+
+.ym {
+  padding: 13px 13px 11px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-1);
+}
+.ym-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 2px 2px 10px;
+  border-radius: 8px;
+  transition: color var(--dur);
+}
+.ym-h .ym-name { font-size: 13.5px; font-weight: 650; }
+.ym-h .ym-count {
+  font-size: 11px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.ym-h:hover .ym-name { color: var(--accent); }
+.ym-h:hover .ym-count { color: var(--text-2); }
+
+.ym-dots {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.ym-d {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 5px;
+  background: var(--surface-2);
+  transition: transform .12s var(--ease), box-shadow var(--dur), background-color .3s;
+}
+.ym-d:hover { transform: scale(1.18); }
+.ym-d[data-l="1"] { background: color-mix(in srgb, var(--accent) 30%, var(--surface-2)); }
+.ym-d[data-l="2"] { background: color-mix(in srgb, var(--accent) 62%, var(--surface-2)); }
+.ym-d[data-l="3"] { background: var(--accent); }
+.ym-d.today { box-shadow: inset 0 0 0 1.5px var(--text-2); }
+.ym-d.blank { background: none; pointer-events: none; }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 900px) {
+  .wcol { min-height: 320px; }
+}
+
+@media (max-width: 640px) {
+  .week { min-width: 820px; }
+  .mcell { min-height: 64px; padding: 6px 7px; }
+  .mchips { display: none; }
+  .mdots { display: flex; }
+  .mnum { width: 21px; height: 21px; font-size: 11.5px; }
+  .year-grid { grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 8px; }
+  .ym { padding: 10px 10px 8px; }
+}

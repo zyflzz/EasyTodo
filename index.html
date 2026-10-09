@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="linen">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EasyTodo · 极简待办</title>
+<meta name="description" content="EasyTodo —— 快速、离线、莫兰迪配色的极简待办清单">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="%238A7A6D"/><path d="M19 33l10 10 18-21" stroke="%23FAF8F4" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'>
+<script>
+/* 首帧前恢复上次主题，避免闪白 */
+try{var _s=JSON.parse(localStorage.getItem("easytodo.settings.v1"));if(_s&&_s.theme)document.documentElement.setAttribute("data-theme",_s.theme)}catch(e){}
+</script>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/calendar.css">
+<script defer src="js/utils.js"></script>
+<script defer src="js/store.js"></script>
+<script defer src="js/filestore.js"></script>
+<script defer src="js/theme.js"></script>
+<script defer src="js/view-day.js"></script>
+<script defer src="js/view-week.js"></script>
+<script defer src="js/view-month.js"></script>
+<script defer src="js/view-year.js"></script>
+<script defer src="js/app.js"></script>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="var(--accent)"/><path d="M19 33l10 10 18-21" stroke="var(--on-accent)" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="brand-name">EasyTodo</span>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="视图切换">
+      <button class="tab" data-view="day">日</button>
+      <button class="tab" data-view="week">周</button>
+      <button class="tab" data-view="month">月</button>
+      <button class="tab" data-view="year">年</button>
+    </nav>
+    <div class="actions">
+      <button class="icon-btn" id="btn-search" title="搜索（/）" aria-label="搜索">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+      </button>
+      <div class="theme-wrap" id="data-wrap">
+        <button class="icon-btn" id="btn-data" title="数据存储" aria-label="数据存储" aria-haspopup="true">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5.5" rx="8" ry="2.8"/><path d="M4 5.5V18.5c0 1.55 3.58 2.8 8 2.8s8-1.25 8-2.8V5.5"/><path d="M4 12c0 1.55 3.58 2.8 8 2.8s8-1.25 8-2.8"/></svg>
+        </button>
+      </div>
+      <div class="theme-wrap" id="theme-wrap">
+        <button class="icon-btn" id="btn-theme" title="切换主题" aria-label="切换主题" aria-haspopup="true">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path class="fill" d="M12 3a9 9 0 0 1 0 18Z"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="toolbar-inner">
+      <button class="icon-btn" id="btn-prev" title="上一个（←）" aria-label="上一周期">
+        <svg viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-next" title="下一个（→）" aria-label="下一周期">
+        <svg viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>
+      </button>
+      <h1 class="period" id="period-title">—</h1>
+      <span class="today-badge" id="today-badge" hidden>今天</span>
+      <span class="spacer"></span>
+      <button class="pill-btn" id="btn-today">今天</button>
+    </div>
+  </div>
+
+  <main id="content" class="view"></main>
+</div>
+
+<div id="toast" role="status" aria-live="polite">
+  <span id="toast-msg"></span>
+  <button id="toast-act" hidden></button>
+</div>
+
+<noscript><p style="text-align:center;padding:48px;font-size:15px">EasyTodo 需要启用 JavaScript 才能运行。</p></noscript>
+</body>
+</html>
