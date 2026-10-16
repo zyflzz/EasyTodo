@@ -152,8 +152,11 @@
     const mainBtn = !supported ? null :
       st.state === 'ready'
         ? U.h('button', { class: 'dp-main ghost', onclick: () => doConnect(true) }, '重新选择文件夹')
-        : U.h('button', { class: 'dp-main', onclick: () => doConnect(false) },
-            st.state === 'prompt' ? '恢复授权' : '绑定数据文件夹');
+        : U.h('button', {
+            class: 'dp-main', title: '建议在浏览器授权弹窗中选择「每次访问时允许」，可减少重复授权',
+            onclick: () => doConnect(false)
+          },
+          st.state === 'prompt' ? '恢复授权' : '绑定数据文件夹');
 
     const statusText = supported
       ? meta.label(st.name)
@@ -178,8 +181,8 @@
         : null,
       U.h('p', { class: 'dp-note' },
         supported
-          ? '数据实时保存在浏览器本地；绑定文件夹后自动同步为 easytodo-data.json。建议绑定本项目文件夹。'
-          : '改用 Edge / Chrome 打开即可绑定文件夹，生成可查看的 easytodo-data.json。'));
+          ? '数据实时保存在浏览器本地；绑定文件夹后自动同步为 data/easytodo-data.json。建议绑定本项目文件夹；打开页面后任意点击一次即可自动恢复授权。'
+          : '改用 Edge / Chrome 打开即可绑定文件夹，生成可查看的 data/easytodo-data.json。'));
 
     dataWrap.append(dataPop);
     setTimeout(() => document.addEventListener('click', closeDataPopOnce), 0);
@@ -188,11 +191,14 @@
   async function doConnect(rebind) {
     const r = await ET.fileStore.connect(rebind);
     if (r.state === 'ready') {
-      if (r.loaded > 0) {
-        U.toast('已从数据文件恢复 ' + r.loaded + ' 条待办');
+      if (r.migrated) {
+        U.toast('数据已迁移至 data 文件夹');
+        if (r.loaded > 0) ET.app.refresh();
+      } else if (r.loaded > 0) {
+        U.toast('已从 data/easytodo-data.json 恢复 ' + r.loaded + ' 条待办');
         ET.app.refresh();
       } else {
-        U.toast('已绑定「' + r.name + '」，数据将保存为 easytodo-data.json');
+        U.toast('已绑定「' + r.name + '」，数据将保存为 data/easytodo-data.json');
       }
       closeDataPop();
     } else if (r.state !== 'unbound') {
@@ -337,9 +343,30 @@
   /* 异步连接本地数据文件（不阻塞首屏；上次已授权则自动恢复数据） */
   if (ET.fileStore.supported()) {
     ET.fileStore.init().then((r) => {
-      if (r && r.loaded > 0) {
+      if (r && r.migrated) {
         ET.app.refresh();
-        U.toast('已从 easytodo-data.json 恢复 ' + r.loaded + ' 条待办');
+        U.toast('数据已迁移至 data 文件夹');
+      } else if (r && r.loaded > 0) {
+        ET.app.refresh();
+        U.toast('已从 data/easytodo-data.json 恢复 ' + r.loaded + ' 条待办');
+      }
+      /* file:// 页面的授权无法跨会话持久：待授权时在首次点击中自动恢复，
+         免去每次手动到面板点"恢复授权" */
+      if (r && r.state === 'prompt') {
+        document.addEventListener('click', () => {
+          ET.fileStore.connect().then((res) => {
+            if (res.state === 'ready') {
+              if (res.migrated) ET.app.refresh();
+              if (res.loaded > 0) {
+                ET.app.refresh();
+                U.toast('数据文件夹已连接，恢复 ' + res.loaded + ' 条待办');
+              } else {
+                U.toast('数据文件夹已连接');
+              }
+            }
+            /* 用户在浏览器弹窗中拒绝时静默，可随时在数据面板手动恢复 */
+          });
+        }, { once: true });
       }
     });
   }
