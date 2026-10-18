@@ -5,6 +5,9 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* hidden 属性必须始终生效（防止组件的 display 覆盖 UA 的 display:none） */
+[hidden] { display: none !important; }
+
 html {
   -webkit-text-size-adjust: 100%;
   background: var(--bg);

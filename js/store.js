@@ -161,11 +161,13 @@ ET.store = (function () {
     return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
   }
 
-  function add(date, title) {
+  function add(date, title, opts) {
+    const o = opts || {};
     const t = {
-      id: U.uid(), title: title, date: date, done: false,
-      createdAt: U.isoLocal(new Date())
+      id: U.uid(), title: title, date: date, done: !!o.done,
+      createdAt: (typeof o.createdAt === 'string' && o.createdAt) || U.isoLocal(new Date())
     };
+    if (t.done) t.completedAt = (typeof o.completedAt === 'string' && o.completedAt) || t.createdAt;
     insert(t);
     saveSoon();
     return t;

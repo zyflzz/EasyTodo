@@ -58,6 +58,10 @@ ET.utils = (function () {
       sign + pad(Math.floor(abs / 60)) + ':' + pad(abs % 60);
   };
 
+  /* 指定日期 + 时分 → ISO 本地格式（补记历史待办时用） */
+  const isoAt = (date, h, m) => isoLocal(
+    new Date(+date.slice(0, 4), +date.slice(5, 7) - 1, +date.slice(8, 10), h, m, 0, 0));
+
   /* ---------- 通用 ---------- */
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
@@ -204,7 +208,7 @@ ET.utils = (function () {
     pad, toDateStr, parseDate, today, daysInMonth,
     addDays, addMonths, addYears, weekStart,
     fmtDay, weekday, weekShort, WEEK_SHORT,
-    uid, hash, debounce, motionOK, isoLocal,
+    uid, hash, debounce, motionOK, isoLocal, isoAt,
     h, svgEl, flip, toast, celebrate
   };
 })();

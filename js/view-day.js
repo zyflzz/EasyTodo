@@ -16,6 +16,7 @@ ET.views.day = (function () {
   let metaEl = null;
   let currentDate = null;
   let isPast = false; /* 当前查看的日期是否在过去（可顺延未完成到今天） */
+  let backfill = false; /* 补记模式：允许为过去补录已完成待办并手动指定时间 */
 
   const ICONS = {
     check: '<svg viewBox="0 0 24 24"><path d="M5.5 12.5l4.2 4.2L18.5 8"/></svg>',
@@ -68,11 +69,13 @@ ET.views.day = (function () {
 
   /* ---------- 添加 ---------- */
   function buildAdd() {
+    const locked = isPast && !backfill;
     addInput = U.h('input', {
       type: 'text',
       maxlength: 120,
       'aria-label': '新增待办',
-      placeholder: placeholderFor(currentDate)
+      placeholder: addPlaceholder(),
+      disabled: locked || null
     });
     addInput.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
@@ -82,15 +85,25 @@ ET.views.day = (function () {
     const btn = U.h('button', {
       class: 'add-btn',
       'aria-label': '添加待办',
-      title: '添加（Enter）',
+      title: locked ? '过去的日期不能新增待办' : '添加（Enter）',
       onclick: () => { submitAdd(); addInput.focus(); }
     }, U.svgEl(ICONS.plus));
 
-    return U.h('div', { class: 'card add-card' }, addInput, btn);
+    /* 补记模式开关：仅过去日期显示 */
+    const bfBtn = isPast ? U.h('button', {
+      class: 'pill-btn bf-btn' + (backfill ? ' on' : ''),
+      title: backfill ? '补记模式已开启，点击关闭' : '补记模式：为过去补录已完成的待办，时间可手动指定',
+      onclick: toggleBackfill
+    }, backfill ? '补记中' : '补记模式') : null;
+
+    return U.h('div', { class: 'card add-card' + (locked ? ' locked' : '') }, addInput, bfBtn, btn);
   }
 
-  function placeholderFor(date) {
-    return date === U.today() ? '要做什么？回车添加' : '为 ' + U.fmtDay(date) + ' 添加待办';
+  function addPlaceholder() {
+    if (!isPast) {
+      return currentDate === U.today() ? '要做什么？回车添加' : '为 ' + U.fmtDay(currentDate) + ' 添加待办';
+    }
+    return backfill ? '补记：输入内容回车，时间稍后指定' : '过去的日期不能新增待办';
   }
 
   function submitAdd() {
@@ -102,6 +115,9 @@ ET.views.day = (function () {
       card.classList.add('shake');
       return;
     }
+    /* 补记模式：为过去日期录入已完成待办，先选时间 */
+    if (isPast && backfill) { openBackfillDialog(title); return; }
+    if (isPast) return; /* 锁定态防御 */
     const t = S.add(currentDate, title);
     addInput.value = '';
     refreshList(false);
@@ -145,11 +161,16 @@ ET.views.day = (function () {
   }
 
   function itemEl(t) {
+    /* 默认模式下，过去的已完成任务锁定勾选框（不可取消完成） */
+    const lockDone = isPast && t.done && !backfill;
+
     const check = U.h('button', {
       class: 'check',
       role: 'checkbox',
       'aria-checked': String(t.done),
       'aria-label': t.done ? '标记为未完成' : '标记为已完成',
+      title: lockDone ? '过去的已完成任务默认不可修改，可开启「补记模式」' : null,
+      disabled: lockDone || null,
       onclick: () => toggleItem(t.id)
     }, U.svgEl(ICONS.check));
 
@@ -163,13 +184,14 @@ ET.views.day = (function () {
       class: 'todo' + (t.done ? ' done' : ''),
       dataset: { id: t.id, flipId: t.id },
       style: '--cc:' + colorOf(t.id)
-    }, U.h('i', { class: 'tick' }), check, title, buildActs(t));
+    }, U.h('i', { class: 'tick' }), check, title);
 
+    row.append(buildActs(row, t));
     return row;
   }
 
   /* 行尾操作按钮：过去日期的未完成条目额外提供"移到今天" */
-  function buildActs(t) {
+  function buildActs(row, t) {
     const editBtn = U.h('button', {
       class: 'mini-btn', 'aria-label': '编辑', title: '编辑',
       onclick: () => startEdit(row, t)
@@ -228,6 +250,14 @@ ET.views.day = (function () {
 
   /* ---------- 勾选完成 ---------- */
   function toggleItem(id) {
+    /* 默认模式：过去的已完成任务不可取消勾选 */
+    if (isPast && !backfill) {
+      const cur = S.byDate(currentDate).find((x) => x.id === id);
+      if (cur && cur.done) {
+        U.toast('过去的已完成任务不可取消，可开启「补记模式」调整');
+        return;
+      }
+    }
     const t = S.toggle(id);
     /* 记录勾选框位置（重排前），用于喝彩动画起点 */
     let x = innerWidth / 2, y = innerHeight / 2;
@@ -297,6 +327,121 @@ ET.views.day = (function () {
       else if (e.key === 'Escape') commit(false);
     });
     input.addEventListener('blur', () => commit(true));
+  }
+
+  /* ---------- 补记模式：为过去补录已完成待办（滚轮指定创建/完成时间） ---------- */
+  let bfMask = null;
+
+  function toggleBackfill() {
+    backfill = !backfill;
+    render(rootEl, { date: currentDate });
+    if (isPast && backfill) U.toast('补记模式已开启：可为过去添加待办并指定时间');
+  }
+
+  const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+  const MINS = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+  const WHEEL_H = 38; /* 滚轮单项高度，与 CSS 保持一致 */
+
+  /* 滚轮列：scroll-snap 吸附，静止后回调中心值 */
+  function buildWheel(vals, initVal, onChange) {
+    const wheel = U.h('div', { class: 'wheel' });
+    const frag = document.createDocumentFragment();
+    frag.append(U.h('div', { class: 'wheel-pad' }));
+    let cur = Math.max(0, vals.indexOf(initVal));
+    vals.forEach((v, i) => {
+      frag.append(U.h('div', { class: 'wheel-item' + (i === cur ? ' sel' : ''), dataset: { v: v } }, v));
+    });
+    frag.append(U.h('div', { class: 'wheel-pad' }));
+    wheel.append(frag);
+
+    let timer = 0;
+    function settle() {
+      const idx = wheelIdx(wheel, vals.length);
+      wheel.querySelectorAll('.wheel-item').forEach((el, i) => el.classList.toggle('sel', i === idx));
+      if (onChange) onChange(vals[idx]);
+    }
+    wheel.addEventListener('scroll', () => {
+      clearTimeout(timer);
+      timer = setTimeout(settle, 90);
+    }, { passive: true });
+
+    /* 初始定位：置于下一帧，保证容器已参与布局 */
+    requestAnimationFrame(() => { wheel.scrollTop = cur * WHEEL_H; });
+    return wheel;
+  }
+
+  function wheelIdx(wheel, len) {
+    return Math.max(0, Math.min(len - 1, Math.round(wheel.scrollTop / WHEEL_H)));
+  }
+  const wheelVal = (wheel, vals) => vals[wheelIdx(wheel, vals.length)];
+
+  function openBackfillDialog(rawTitle) {
+    if (bfMask) return;
+    const date = currentDate;
+
+    const titleInput = U.h('input', {
+      class: 'bf-title', value: rawTitle, maxlength: 120,
+      'aria-label': '补记内容', placeholder: '补记内容'
+    });
+
+    const ch = buildWheel(HOURS, '09', validate);
+    const cm = buildWheel(MINS, '00', validate);
+    const ph = buildWheel(HOURS, '18', validate);
+    const pm = buildWheel(MINS, '30', validate);
+    const err = U.h('p', { class: 'bf-err', hidden: true }, '完成时间不能早于创建时间');
+
+    const saveBtn = U.h('button', { class: 'pill-btn on bf-save', onclick: commit }, '保存');
+
+    function validate() {
+      const created = (+wheelVal(ch, HOURS)) * 60 + (+wheelVal(cm, MINS));
+      const completed = (+wheelVal(ph, HOURS)) * 60 + (+wheelVal(pm, MINS));
+      const bad = completed < created;
+      err.hidden = !bad;
+      saveBtn.disabled = bad;
+    }
+
+    function commit() {
+      if (saveBtn.disabled) return;
+      const title = titleInput.value.trim();
+      if (!title) { titleInput.focus(); return; }
+      S.add(date, title, {
+        done: true,
+        createdAt: U.isoAt(date, +wheelVal(ch, HOURS), +wheelVal(cm, MINS)),
+        completedAt: U.isoAt(date, +wheelVal(ph, HOURS), +wheelVal(pm, MINS))
+      });
+      closeBackfillDialog();
+      addInput.value = '';
+      refreshList(false);
+      U.toast('已补记「' + title + '」');
+    }
+
+    function closeBackfillDialog() {
+      if (!bfMask) return;
+      document.removeEventListener('keydown', onKey, true);
+      bfMask.remove();
+      bfMask = null;
+    }
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); closeBackfillDialog(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+
+    const card = U.h('div', { class: 'card bf-card', onclick: (e) => e.stopPropagation() },
+      U.h('h3', { class: 'bf-head' }, '补记已完成待办'),
+      U.h('p', { class: 'bf-sub' }, U.fmtDay(date) + ' · 时间可手动指定'),
+      titleInput,
+      U.h('div', { class: 'bf-row' }, U.h('span', { class: 'bf-label' }, '创建'), ch, cm),
+      U.h('div', { class: 'bf-row' }, U.h('span', { class: 'bf-label' }, '完成'), ph, pm),
+      err,
+      U.h('div', { class: 'bf-foot' },
+        U.h('button', { class: 'pill-btn', onclick: closeBackfillDialog }, '取消'),
+        saveBtn));
+
+    bfMask = U.h('div', { class: 'bf-mask' }, card);
+    bfMask.addEventListener('click', (e) => { if (e.target === bfMask) closeBackfillDialog(); });
+    document.body.append(bfMask);
+    titleInput.focus();
+    titleInput.select();
   }
 
   /* ---------- 供外部调用 ---------- */
