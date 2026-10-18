@@ -250,15 +250,23 @@ ET.views.day = (function () {
 
   /* ---------- 勾选完成 ---------- */
   function toggleItem(id) {
+    const cur = S.byDate(currentDate).find((x) => x.id === id);
     /* 默认模式：过去的已完成任务不可取消勾选 */
-    if (isPast && !backfill) {
-      const cur = S.byDate(currentDate).find((x) => x.id === id);
-      if (cur && cur.done) {
-        U.toast('过去的已完成任务不可取消，可开启「补记模式」调整');
-        return;
-      }
+    if (isPast && !backfill && cur && cur.done) {
+      U.toast('过去的已完成任务不可取消，可开启「补记模式」调整');
+      return;
     }
-    const t = S.toggle(id);
+    /* 补记模式：过去的任务勾选为完成时，需手动指定完成时间 */
+    if (isPast && backfill && cur && !cur.done) {
+      openCompleteDialog(cur);
+      return;
+    }
+    applyToggle(id);
+  }
+
+  /* 执行勾选切换 + 喝彩动画 + 刷新（completedAt 由补记弹窗传入） */
+  function applyToggle(id, completedAt) {
+    const t = S.toggle(id, completedAt ? { completedAt: completedAt } : undefined);
     /* 记录勾选框位置（重排前），用于喝彩动画起点 */
     let x = innerWidth / 2, y = innerHeight / 2;
     const check = listInner && listInner.querySelector('[data-flip-id="' + id + '"] .check');
@@ -342,6 +350,27 @@ ET.views.day = (function () {
   const MINS = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
   const WHEEL_H = 38; /* 滚轮单项高度，与 CSS 保持一致 */
 
+  /* 弹窗遮罩：同一时间仅一个，Esc / 点击遮罩关闭 */
+  function openBfMask(card, focusEl) {
+    closeBfMask();
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.stopPropagation(); closeBfMask(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+    bfMask = U.h('div', { class: 'bf-mask' }, card);
+    bfMask.addEventListener('click', (e) => { if (e.target === bfMask) closeBfMask(); });
+    bfMask._onKey = onKey;
+    document.body.append(bfMask);
+    if (focusEl) { focusEl.focus(); if (focusEl.select) focusEl.select(); }
+  }
+
+  function closeBfMask() {
+    if (!bfMask) return;
+    document.removeEventListener('keydown', bfMask._onKey, true);
+    bfMask.remove();
+    bfMask = null;
+  }
+
   /* 滚轮列：scroll-snap 吸附，静止后回调中心值 */
   function buildWheel(vals, initVal, onChange) {
     const wheel = U.h('div', { class: 'wheel' });
@@ -375,6 +404,7 @@ ET.views.day = (function () {
   }
   const wheelVal = (wheel, vals) => vals[wheelIdx(wheel, vals.length)];
 
+  /* 新增补记：标题 + 创建时间 + 完成时间 */
   function openBackfillDialog(rawTitle) {
     if (bfMask) return;
     const date = currentDate;
@@ -409,22 +439,11 @@ ET.views.day = (function () {
         createdAt: U.isoAt(date, +wheelVal(ch, HOURS), +wheelVal(cm, MINS)),
         completedAt: U.isoAt(date, +wheelVal(ph, HOURS), +wheelVal(pm, MINS))
       });
-      closeBackfillDialog();
+      closeBfMask();
       addInput.value = '';
       refreshList(false);
       U.toast('已补记「' + title + '」');
     }
-
-    function closeBackfillDialog() {
-      if (!bfMask) return;
-      document.removeEventListener('keydown', onKey, true);
-      bfMask.remove();
-      bfMask = null;
-    }
-    const onKey = (e) => {
-      if (e.key === 'Escape') { e.stopPropagation(); closeBackfillDialog(); }
-    };
-    document.addEventListener('keydown', onKey, true);
 
     const card = U.h('div', { class: 'card bf-card', onclick: (e) => e.stopPropagation() },
       U.h('h3', { class: 'bf-head' }, '补记已完成待办'),
@@ -434,14 +453,47 @@ ET.views.day = (function () {
       U.h('div', { class: 'bf-row' }, U.h('span', { class: 'bf-label' }, '完成'), ph, pm),
       err,
       U.h('div', { class: 'bf-foot' },
-        U.h('button', { class: 'pill-btn', onclick: closeBackfillDialog }, '取消'),
+        U.h('button', { class: 'pill-btn', onclick: closeBfMask }, '取消'),
         saveBtn));
 
-    bfMask = U.h('div', { class: 'bf-mask' }, card);
-    bfMask.addEventListener('click', (e) => { if (e.target === bfMask) closeBackfillDialog(); });
-    document.body.append(bfMask);
-    titleInput.focus();
-    titleInput.select();
+    openBfMask(card, titleInput);
+  }
+
+  /* 勾选完成（补记模式下的过去任务）：仅选择完成时间（时:分，秒/毫秒为 0） */
+  function openCompleteDialog(t) {
+    if (bfMask) return;
+    const ph = buildWheel(HOURS, '18', validate);
+    const pm = buildWheel(MINS, '30', validate);
+    const err = U.h('p', { class: 'bf-err', hidden: true }, '完成时间不能早于创建时间');
+
+    const saveBtn = U.h('button', { class: 'pill-btn on bf-save', onclick: commit }, '保存');
+
+    function validate() {
+      /* 任务创建时间的时:分（ISO 定宽：YYYY-MM-DDThh:mm:ss±hh:mm） */
+      const ch = +t.createdAt.slice(11, 13);
+      const cmm = +t.createdAt.slice(14, 16);
+      const completed = (+wheelVal(ph, HOURS)) * 60 + (+wheelVal(pm, MINS));
+      const bad = completed < ch * 60 + cmm;
+      err.hidden = !bad;
+      saveBtn.disabled = bad;
+    }
+
+    function commit() {
+      if (saveBtn.disabled) return;
+      closeBfMask();
+      applyToggle(t.id, U.isoAt(currentDate, +wheelVal(ph, HOURS), +wheelVal(pm, MINS)));
+    }
+
+    const card = U.h('div', { class: 'card bf-card', onclick: (e) => e.stopPropagation() },
+      U.h('h3', { class: 'bf-head' }, '勾选完成'),
+      U.h('p', { class: 'bf-sub' }, '「' + t.title + '」 · ' + U.fmtDay(currentDate)),
+      U.h('div', { class: 'bf-row' }, U.h('span', { class: 'bf-label' }, '完成'), ph, pm),
+      err,
+      U.h('div', { class: 'bf-foot' },
+        U.h('button', { class: 'pill-btn', onclick: closeBfMask }, '取消'),
+        saveBtn));
+
+    openBfMask(card);
   }
 
   /* ---------- 供外部调用 ---------- */

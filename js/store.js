@@ -192,12 +192,17 @@ ET.store = (function () {
     saveSoon();
   }
 
-  function toggle(id) {
+  function toggle(id, opts) {
     const t = idMap.get(id);
     if (t) {
       t.done = !t.done;
-      if (t.done) t.completedAt = U.isoLocal(new Date());
-      else delete t.completedAt;
+      if (t.done) {
+        /* 补记模式可传入指定的完成时间（ISO） */
+        const c = opts && typeof opts.completedAt === 'string' ? opts.completedAt : null;
+        t.completedAt = c || U.isoLocal(new Date());
+      } else {
+        delete t.completedAt;
+      }
       saveSoon();
     }
     return t;
