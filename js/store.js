@@ -210,6 +210,20 @@ ET.store = (function () {
     return t;
   }
 
+  /* 移动任务到另一天（保留 createdAt 等所有字段；用于把过去未完成的任务顺延到今天） */
+  function moveTo(id, newDate) {
+    const t = idMap.get(id);
+    if (!t || t.date === newDate || !DATE_RE.test(newDate)) return null;
+    const b = buckets.get(t.date);
+    const i = b ? b.indexOf(t) : -1;
+    if (i > -1) b.splice(i, 1);
+    if (b && !b.length) buckets.delete(t.date);
+    t.date = newDate;
+    insert(t);
+    saveSoon();
+    return t;
+  }
+
   /* 单日查询 O(1)（返回排序副本） */
   const byDate = (date) => {
     const arr = buckets.get(date);
@@ -259,7 +273,7 @@ ET.store = (function () {
 
   return {
     add: add, remove: remove, restore: restore,
-    toggle: toggle, rename: rename,
+    toggle: toggle, rename: rename, moveTo: moveTo,
     byDate: byDate, forRange: forRange, countByDate: countByDate,
     search: search,
     importData: importData, serializeFile: serializeFile,

@@ -280,6 +280,12 @@ body[data-view="year"]  .toolbar-inner { max-width: 1120px; }
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+/* 过去日期的一键顺延按钮 */
+.day-meta .carry-btn {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  font-size: 12px;
+}
 .progress {
   flex: 1;
   height: 4px;
@@ -436,6 +442,7 @@ body[data-view="year"]  .toolbar-inner { max-width: 1120px; }
 }
 .mini-btn:hover { background: var(--border); color: var(--text); }
 .mini-btn.danger:hover { color: var(--danger); }
+.mini-btn.move:hover { color: var(--accent); }
 .mini-btn svg {
   width: 15px; height: 15px;
   fill: none; stroke: currentColor;

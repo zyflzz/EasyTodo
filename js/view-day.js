@@ -15,12 +15,14 @@ ET.views.day = (function () {
   let addInput = null;
   let metaEl = null;
   let currentDate = null;
+  let isPast = false; /* 当前查看的日期是否在过去（可顺延未完成到今天） */
 
   const ICONS = {
     check: '<svg viewBox="0 0 24 24"><path d="M5.5 12.5l4.2 4.2L18.5 8"/></svg>',
     pencil: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19.5 8.5a2.12 2.12 0 0 0-3-3L5 17v3Z"/><path d="M13.5 6.5l3 3"/></svg>',
     trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M9.5 7V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v2M6.5 7l.9 12.1A1.9 1.9 0 0 0 9.3 21h5.4a1.9 1.9 0 0 0 1.9-1.9L17.5 7"/></svg>',
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+    moveToday: '<svg viewBox="0 0 24 24"><path d="M3.5 12h11"/><path d="M10.5 8l4 4-4 4"/><path d="M19 5.5v13"/></svg>',
     empty: '<svg viewBox="0 0 64 64"><rect x="14" y="10" width="36" height="44" rx="9"/><path d="M24 26h16M24 34h16M24 42h9"/></svg>'
   };
 
@@ -30,6 +32,7 @@ ET.views.day = (function () {
   function render(root, state) {
     rootEl = root;
     currentDate = state.date;
+    isPast = currentDate < U.today();
     root.className = 'view view-day';
     root.replaceChildren(buildMeta(), buildAdd(), buildList());
     refreshMeta();
@@ -39,7 +42,12 @@ ET.views.day = (function () {
   function buildMeta() {
     metaEl = U.h('div', { class: 'day-meta', hidden: true },
       U.h('span', { class: 'num' }),
-      U.h('div', { class: 'progress' }, U.h('i')));
+      U.h('div', { class: 'progress' }, U.h('i')),
+      U.h('button', {
+        class: 'pill-btn carry-btn', hidden: true,
+        title: '把这一天未完成的待办移到今天（创建时间保持不变）',
+        onclick: movePendingToday
+      }));
     return metaEl;
   }
 
@@ -49,6 +57,13 @@ ET.views.day = (function () {
     metaEl.hidden = false;
     metaEl.querySelector('.num').textContent = '已完成 ' + done + '/' + n;
     metaEl.querySelector('.progress > i').style.width = (n ? Math.round(done / n * 100) : 0) + '%';
+    /* 过去日期且有未完成：显示一键顺延按钮 */
+    const btn = metaEl.querySelector('.carry-btn');
+    if (btn) {
+      const pending = n - done;
+      btn.hidden = !(isPast && pending > 0);
+      if (!btn.hidden) btn.textContent = '未完成移到今天 (' + pending + ')';
+    }
   }
 
   /* ---------- 添加 ---------- */
@@ -144,6 +159,17 @@ ET.views.day = (function () {
       ondblclick: () => startEdit(row, t)
     }, t.title);
 
+    const row = U.h('li', {
+      class: 'todo' + (t.done ? ' done' : ''),
+      dataset: { id: t.id, flipId: t.id },
+      style: '--cc:' + colorOf(t.id)
+    }, U.h('i', { class: 'tick' }), check, title, buildActs(t));
+
+    return row;
+  }
+
+  /* 行尾操作按钮：过去日期的未完成条目额外提供"移到今天" */
+  function buildActs(t) {
     const editBtn = U.h('button', {
       class: 'mini-btn', 'aria-label': '编辑', title: '编辑',
       onclick: () => startEdit(row, t)
@@ -154,13 +180,39 @@ ET.views.day = (function () {
       onclick: () => removeItem(row, t)
     }, U.svgEl(ICONS.trash));
 
-    const row = U.h('li', {
-      class: 'todo' + (t.done ? ' done' : ''),
-      dataset: { id: t.id, flipId: t.id },
-      style: '--cc:' + colorOf(t.id)
-    }, U.h('i', { class: 'tick' }), check, title, U.h('span', { class: 'acts' }, editBtn, delBtn));
+    const acts = U.h('span', { class: 'acts' });
+    if (isPast && !t.done) {
+      acts.append(U.h('button', {
+        class: 'mini-btn move', 'aria-label': '移到今天', title: '移到今天（创建时间不变）',
+        onclick: () => moveOne(t)
+      }, U.svgEl(ICONS.moveToday)));
+    }
+    acts.append(editBtn, delBtn);
+    return acts;
+  }
 
-    return row;
+  /* ---------- 顺延：把过去未完成的任务移到今天（createdAt 不变，可撤销） ---------- */
+  function moveOne(t) {
+    const originDate = currentDate;
+    if (!S.moveTo(t.id, U.today())) return;
+    refreshList(false);
+    U.toast('已移到今天「' + t.title + '」', '撤销', () => {
+      S.moveTo(t.id, originDate);
+      if (ET.app && ET.app.refresh) ET.app.refresh();
+    });
+  }
+
+  function movePendingToday() {
+    const originDate = currentDate;
+    const items = S.byDate(originDate).filter((t) => !t.done);
+    if (!items.length) return;
+    const today = U.today();
+    for (const t of items) S.moveTo(t.id, today);
+    refreshList(false);
+    U.toast('已把 ' + items.length + ' 条未完成移到今天', '撤销', () => {
+      for (const t of items) S.moveTo(t.id, originDate);
+      if (ET.app && ET.app.refresh) ET.app.refresh();
+    });
   }
 
   /* 整体刷新列表（flip=true 时对已有条目做位移动画） */
