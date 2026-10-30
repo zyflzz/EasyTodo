@@ -181,6 +181,32 @@ ET.fileStore = (function () {
   }
 
   /* ---------- 导出 / 导入（不依赖文件夹绑定） ---------- */
+  /* 导出 Markdown（按日期分组的可读清单，勾选框语法） */
+  function exportMarkdown() {
+    const items = ET.store.all();
+    if (!items.length) { ET.utils.toast('暂无待办可导出'); return; }
+    const U = ET.utils;
+    const byDate = new Map();
+    for (const t of items) {
+      if (!byDate.has(t.date)) byDate.set(t.date, []);
+      byDate.get(t.date).push(t);
+    }
+    const today = U.today();
+    let md = '# EasyTodo 待办清单\n\n> 导出于 ' +
+      U.isoLocal(new Date()).slice(0, 16).replace('T', ' ') + '\n';
+    for (const d of Array.from(byDate.keys()).sort()) {
+      md += '\n## ' + (d === today ? '今天 · ' : '') + d + ' ' + U.weekday(d) + '\n';
+      for (const t of byDate.get(d)) md += '- [' + (t.done ? 'x' : ' ') + '] ' + t.title + '\n';
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([md], { type: 'text/markdown;charset=utf-8' }));
+    a.download = 'easytodo-' + today + '.md';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+
   function exportJSON() {
     const payload = ET.store.serializeFile();
     const a = document.createElement('a');
@@ -225,6 +251,7 @@ ET.fileStore = (function () {
     unbind: unbind,
     writeSoon: writeSoon,
     exportJSON: exportJSON,
+    exportMarkdown: exportMarkdown,
     importJSON: importJSON,
     openFolder: openFolder,
     get status() { return status; },

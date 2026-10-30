@@ -158,7 +158,28 @@ ET.store = (function () {
       const ca = a.completedAt || '', cb = b.completedAt || '';
       return ca < cb ? -1 : ca > cb ? 1 : 0;
     }
+    /* 手动排序（拖拽）优先：order 小在前；未拖过的按创建时间 */
+    if (a.order != null || b.order != null) {
+      const oa = a.order == null ? 1e9 : a.order;
+      const ob = b.order == null ? 1e9 : b.order;
+      if (oa !== ob) return oa - ob;
+    }
     return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
+  }
+
+  /* 拖拽重排：把 id 放到 targetId 之前/之后（targetId 为空时放到未完成末尾），并重编号 */
+  function reorder(id, targetId, place) {
+    const t = idMap.get(id);
+    if (!t || t.done) return;
+    const arr = (buckets.get(t.date) || []).filter((x) => !x.done);
+    const from = arr.indexOf(t);
+    if (from < 0) return;
+    arr.splice(from, 1);
+    let idx = targetId ? arr.findIndex((x) => x.id === targetId) : -1;
+    if (idx < 0) idx = arr.length;
+    arr.splice(place === 'after' ? idx + 1 : idx, 0, t);
+    arr.forEach((x, i) => { x.order = i; });
+    saveSoon();
   }
 
   function add(date, title, opts) {
@@ -253,6 +274,44 @@ ET.store = (function () {
     return { n: arr ? arr.length : 0, done: done };
   }
 
+  const all = () => flatAll().slice().sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : cmp(a, b));
+
+  /* 今天之前的所有未完成，按日期降序（近的在前），组内按展示顺序 */
+  function pendingBefore(date) {
+    const out = [];
+    for (const [d, arr] of buckets) {
+      if (d < date) for (const t of arr) if (!t.done) out.push(t);
+    }
+    out.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : cmp(a, b)));
+    return out;
+  }
+
+  /* 汇总统计：累计 / 完成率原料 / 今日完成 / 近 7 天完成 / 连续完成天数 */
+  function stats() {
+    const today = U.today();
+    const weekAgo = U.addDays(today, -6);
+    let total = 0, done = 0, todayDone = 0, weekDone = 0;
+    const doneDates = new Set();
+    for (const [, arr] of buckets) {
+      for (const t of arr) {
+        total++;
+        if (!t.done) continue;
+        done++;
+        const cd = (t.completedAt || '').slice(0, 10);
+        if (!cd) continue;
+        doneDates.add(cd);
+        if (cd === today) todayDone++;
+        if (cd >= weekAgo && cd <= today) weekDone++;
+      }
+    }
+    /* 连续完成：从今天起往回数；今天尚未完成不打断（从昨天起算） */
+    let streak = 0;
+    let cur = doneDates.has(today) ? today : U.addDays(today, -1);
+    while (doneDates.has(cur)) { streak++; cur = U.addDays(cur, -1); }
+    return { total: total, done: done, todayDone: todayDone, weekDone: weekDone, streak: streak };
+  }
+
   function search(q) {
     q = q.toLowerCase();
     const hits = [];
@@ -282,6 +341,8 @@ ET.store = (function () {
     add: add, remove: remove, restore: restore,
     toggle: toggle, rename: rename, moveTo: moveTo,
     byDate: byDate, forRange: forRange, countByDate: countByDate,
+    all: all, pendingBefore: pendingBefore, stats: stats,
+    reorder: reorder,
     search: search,
     importData: importData, serializeFile: serializeFile,
     prefsGet: prefsGet, prefsSet: prefsSet,

@@ -433,6 +433,215 @@ body[data-view="year"]  .toolbar-inner { max-width: 1120px; }
 }
 .wheel-item.sel { color: var(--text); font-weight: 650; }
 
+/* ---------- 输入联想 ---------- */
+.add-card { position: relative; }
+.suggest {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: calc(100% + 6px);
+  z-index: 30;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(40, 32, 24, .16));
+  padding: 5px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: sug-in .14s ease;
+}
+@keyframes sug-in { from { opacity: 0; transform: translateY(-4px); } }
+.s-item {
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 8px 11px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.s-item.hl { background: var(--surface-2); color: var(--text); }
+
+/* ---------- 拖拽排序 ---------- */
+.todo { position: relative; }
+.todo.dragging { opacity: .35; }
+.todo.drop-above::before,
+.todo.drop-below::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  z-index: 2;
+  pointer-events: none;
+}
+.todo.drop-above::before { top: -6px; }
+.todo.drop-below::after { bottom: -6px; }
+
+/* ---------- 今日提醒卡：过去还有未完成 ---------- */
+.overdue-card { padding: 0; overflow: hidden; }
+.od-head { display: flex; align-items: center; gap: 8px; padding: 11px 14px; }
+.od-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text);
+  font: inherit;
+}
+.od-badge {
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12.5px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.od-title { font-size: 13.5px; color: var(--text-2); }
+.od-arrow {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-right: 1.6px solid var(--text-3);
+  border-bottom: 1.6px solid var(--text-3);
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform .18s ease;
+}
+.overdue-card.open .od-arrow { transform: rotate(225deg) translateY(-1px); }
+.od-all { flex: none; padding: 4px 11px; font-size: 12px; }
+.od-list {
+  display: none;
+  margin: 0;
+  padding: 2px 14px 12px;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.overdue-card.open .od-list { display: block; }
+.od-group { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+.od-date { font-size: 11.5px; color: var(--text-3); }
+.od-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+.od-t {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- 日期跳转迷你月历 ---------- */
+#period-title.jumpy { cursor: pointer; border-bottom: 1px dashed transparent; transition: border-color .15s; }
+#period-title.jumpy:hover { border-bottom-color: var(--text-3); }
+.toolbar-inner { position: relative; }
+.jump-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  width: 272px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg, 0 16px 40px rgba(40, 32, 24, .18));
+  padding: 12px 12px 10px;
+  animation: sug-in .16s ease;
+}
+.j-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.j-title { font-size: 13.5px; font-weight: 650; color: var(--text); }
+.j-nav {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: 15px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.j-nav:hover { background: var(--surface-2); color: var(--text); }
+.j-weeks {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 2px;
+}
+.j-weeks span {
+  text-align: center;
+  font-size: 10.5px;
+  color: var(--text-3);
+  padding: 3px 0;
+}
+.j-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.jc {
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-variant-numeric: tabular-nums;
+  transition: background .12s;
+}
+.jc:hover { background: var(--surface-2); color: var(--text); }
+.jc.other { color: var(--text-4, var(--text-3)); opacity: .45; }
+.jc.cur { background: var(--surface-2); color: var(--text); font-weight: 650; }
+.jc.today { box-shadow: inset 0 0 0 1.5px var(--accent); color: var(--accent); font-weight: 700; }
+.j-today { width: 100%; margin-top: 8px; padding: 6px; font-size: 12.5px; }
+
+/* ---------- 数据面板统计卡 ---------- */
+.dp-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.dp-stat {
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 8px 4px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dp-stat b {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dp-stat span { font-size: 10.5px; color: var(--text-3); white-space: nowrap; }
+
 .list-card { padding: 6px; }
 
 /* 单条待办 */

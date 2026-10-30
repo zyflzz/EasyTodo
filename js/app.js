@@ -99,6 +99,90 @@
   btnToday.addEventListener('click', () => ET.nav.today());
   tabButtons.forEach((b) => b.addEventListener('click', () => ET.nav.to(b.dataset.view)));
 
+  /* ---------- 日期跳转：点击标题弹出迷你月历 ---------- */
+  const toolbarInner = $('.toolbar-inner');
+  let jumpPop = null;
+  let jumpMonth = null; /* 'YYYY-MM'，弹层内浏览的月份 */
+
+  periodTitle.classList.add('jumpy');
+  periodTitle.title = '点击选择日期';
+  periodTitle.addEventListener('click', openJumpPop);
+
+  function daysInMonth(y, m1) { return new Date(y, m1, 0).getDate(); }
+  function shiftMonth(ym, delta) {
+    let y = +ym.slice(0, 4), m = +ym.slice(5, 7) + delta;
+    if (m < 1) { m = 12; y--; } else if (m > 12) { m = 1; y++; }
+    return y + '-' + String(m).padStart(2, '0');
+  }
+
+  function openJumpPop() {
+    closeJumpPop();
+    jumpMonth = state.date.slice(0, 7);
+    jumpPop = U.h('div', { class: 'jump-pop', role: 'dialog', 'aria-label': '跳转日期' });
+    toolbarInner.append(jumpPop);
+    renderJumpMonth();
+    setTimeout(() => document.addEventListener('click', closeJumpOnce), 0);
+  }
+
+  function renderJumpMonth() {
+    const y = +jumpMonth.slice(0, 4), m = +jumpMonth.slice(5, 7);
+    const firstDow = (new Date(y, m - 1, 1).getDay() + 6) % 7; /* 周一起始 */
+    const nDays = daysInMonth(y, m);
+    const prevN = daysInMonth(m === 1 ? y - 1 : y, m === 1 ? 12 : m - 1);
+    const nextM = shiftMonth(jumpMonth, 1);
+    const curPeriod = period(state.view, state.date);
+    const today = U.today();
+
+    const cells = [];
+    for (let i = 0; i < 42; i++) {
+      const dnum = i - firstDow + 1;
+      let ds, other = false;
+      if (dnum < 1) {
+        const d = prevN + dnum;
+        ds = shiftMonth(jumpMonth, -1) + '-' + String(d).padStart(2, '0');
+        other = true;
+      } else if (dnum > nDays) {
+        const d = dnum - nDays;
+        ds = nextM + '-' + String(d).padStart(2, '0');
+        other = true;
+      } else {
+        ds = jumpMonth + '-' + String(dnum).padStart(2, '0');
+      }
+      cells.push(U.h('button', {
+        type: 'button',
+        class: 'jc' + (other ? ' other' : '') + (ds === today ? ' today' : '') +
+          (period(state.view, ds) === curPeriod ? ' cur' : ''),
+        onclick: () => { ET.nav.to(state.view, ds); closeJumpPop(); }
+      }, String(+ds.slice(8))));
+    }
+
+    jumpPop.replaceChildren(
+      U.h('div', { class: 'j-head' },
+        U.h('button', {
+          type: 'button', class: 'j-nav', 'aria-label': '上一月',
+          onclick: () => { jumpMonth = shiftMonth(jumpMonth, -1); renderJumpMonth(); }
+        }, '‹'),
+        U.h('span', { class: 'j-title' }, y + ' 年 ' + m + ' 月'),
+        U.h('button', {
+          type: 'button', class: 'j-nav', 'aria-label': '下一月',
+          onclick: () => { jumpMonth = shiftMonth(jumpMonth, 1); renderJumpMonth(); }
+        }, '›')),
+      U.h('div', { class: 'j-weeks' },
+        ['一', '二', '三', '四', '五', '六', '日'].map((w) => U.h('span', null, w))),
+      U.h('div', { class: 'j-grid' }, cells),
+      U.h('button', { type: 'button', class: 'pill-btn j-today', onclick: () => { ET.nav.today(); closeJumpPop(); } }, '回到今天'));
+  }
+
+  function closeJumpOnce(e) {
+    if (jumpPop && !jumpPop.contains(e.target) && !periodTitle.contains(e.target)) closeJumpPop();
+  }
+  function closeJumpPop() {
+    document.removeEventListener('click', closeJumpOnce);
+    if (jumpPop) { jumpPop.remove(); jumpPop = null; }
+  }
+  /* Esc 关闭 */
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && jumpPop) closeJumpPop(); });
+
   /* ---------- 主题弹层 ---------- */
   const themeWrap = $('#theme-wrap');
   let pop = null;
@@ -149,6 +233,14 @@
     const meta = STATE_META[st.state] || STATE_META.unbound;
     const supported = ET.fileStore.supported();
 
+    /* 统计卡：累计 / 完成率 / 本周 / 连续 */
+    const ts = S.stats();
+    const statsEl = U.h('div', { class: 'dp-stats' },
+      U.h('div', { class: 'dp-stat' }, U.h('b', null, String(ts.done)), U.h('span', null, '累计完成')),
+      U.h('div', { class: 'dp-stat' }, U.h('b', null, ts.total ? Math.round(ts.done / ts.total * 100) + '%' : '—'), U.h('span', null, '完成率')),
+      U.h('div', { class: 'dp-stat' }, U.h('b', null, String(ts.weekDone)), U.h('span', null, '近7天完成')),
+      U.h('div', { class: 'dp-stat' }, U.h('b', null, ts.streak + ' 天'), U.h('span', null, '连续完成')));
+
     const mainBtn = !supported ? null :
       st.state === 'ready'
         ? U.h('button', { class: 'dp-main ghost', onclick: () => doConnect(true) }, '重新选择文件夹')
@@ -163,6 +255,7 @@
       : '数据保存在浏览器本地（需 Edge/Chrome 支持文件存储）';
 
     dataPop = U.h('div', { class: 'data-pop', role: 'menu', 'aria-label': '数据存储' },
+      statsEl,
       U.h('div', { class: 'dp-status' },
         U.h('span', { class: 'dp-dot ' + meta.dot }),
         U.h('span', null, statusText)),
@@ -175,6 +268,11 @@
           onclick: () => { ET.fileStore.openFolder(); closeDataPop(); }
         }, '打开文件夹'),
         U.h('button', { class: 'dp-btn', onclick: () => { ET.fileStore.exportJSON(); closeDataPop(); } }, '导出备份'),
+        U.h('button', {
+          class: 'dp-btn',
+          title: '按日期分组导出为 Markdown 清单',
+          onclick: () => { ET.fileStore.exportMarkdown(); closeDataPop(); }
+        }, '导出 Markdown'),
         U.h('button', { class: 'dp-btn', onclick: () => fileInput && fileInput.click() }, '导入数据')),
       st.state === 'ready'
         ? U.h('button', { class: 'dp-link', onclick: async () => { await ET.fileStore.unbind(); openDataPop(); } }, '解除文件夹绑定')

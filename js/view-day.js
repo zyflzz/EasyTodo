@@ -35,7 +35,8 @@ ET.views.day = (function () {
     currentDate = state.date;
     isPast = currentDate < U.today();
     root.className = 'view view-day';
-    root.replaceChildren(buildMeta(), buildAdd(), buildList());
+    const parts = [buildMeta(), buildAdd(), buildOverdue(), buildList()];
+    root.replaceChildren(...parts.filter(Boolean));
     refreshMeta();
   }
 
@@ -78,9 +79,29 @@ ET.views.day = (function () {
       disabled: locked || null
     });
     addInput.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { moveHl(e.key === 'ArrowDown' ? 1 : -1); return; }
       if (e.key !== 'Enter') return;
       e.stopPropagation();
+      /* 联想高亮项：Enter 先填入 */
+      const hl = suggestEl && suggestEl.querySelector('.s-item.hl');
+      if (hl) { addInput.value = hl.dataset.v; moveHl(0); return; }
       submitAdd();
+    });
+    addInput.addEventListener('input', renderSuggest);
+    addInput.addEventListener('blur', () => setTimeout(closeSuggest, 120));
+    /* 多行粘贴：自动拆成多条 */
+    addInput.addEventListener('paste', (e) => {
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      if (!text || text.indexOf('\n') < 0) return;
+      e.preventDefault();
+      if (isPast) { U.toast(backfill ? '补记模式下请逐条添加，以便指定时间' : '过去的日期不能新增待办'); return; }
+      const lines = text.split(/\r?\n/).map((s) => s.trim()).filter(Boolean).slice(0, 20);
+      if (!lines.length) return;
+      for (const ln of lines) S.add(currentDate, ln);
+      addInput.value = '';
+      closeSuggest();
+      refreshList(false);
+      U.toast('已添加 ' + lines.length + ' 条待办');
     });
     const btn = U.h('button', {
       class: 'add-btn',
@@ -101,9 +122,54 @@ ET.views.day = (function () {
 
   function addPlaceholder() {
     if (!isPast) {
-      return currentDate === U.today() ? '要做什么？回车添加' : '为 ' + U.fmtDay(currentDate) + ' 添加待办';
+      return currentDate === U.today() ? '要做什么？回车添加（支持粘贴多行）' : '为 ' + U.fmtDay(currentDate) + ' 添加待办';
     }
     return backfill ? '补记：输入内容回车，时间稍后指定' : '过去的日期不能新增待办';
+  }
+
+  /* ---------- 输入联想：历史标题快速填入 ---------- */
+  let suggestEl = null;
+  let hlIdx = -1;
+
+  function renderSuggest() {
+    closeSuggest();
+    const q = addInput.value.trim();
+    if (!q || isPast) return;
+    const ql = q.toLowerCase();
+    const seen = new Set();
+    const hits = [];
+    for (const t of S.all()) {
+      if (hits.length >= 6) break;
+      if (t.title === q || seen.has(t.title)) continue;
+      if (t.title.toLowerCase().includes(ql)) { seen.add(t.title); hits.push(t.title); }
+    }
+    if (!hits.length) return;
+    hlIdx = -1;
+    suggestEl = U.h('div', { class: 'suggest' }, hits.map((s) =>
+      U.h('button', {
+        type: 'button',
+        class: 's-item',
+        dataset: { v: s },
+        onpointerdown: (e) => e.preventDefault(), /* 保持输入框焦点，避免 blur 先关闭 */
+        onclick: () => { addInput.value = s; closeSuggest(); addInput.focus(); },
+        onmouseenter: (e) => { e.currentTarget.classList.add('hl'); }
+      }, s)));
+    addInput.closest('.add-card').append(suggestEl);
+  }
+
+  function moveHl(step) {
+    if (!suggestEl) return;
+    const items = Array.from(suggestEl.querySelectorAll('.s-item'));
+    if (!items.length) return;
+    items.forEach((el) => el.classList.remove('hl'));
+    if (step === 0) { hlIdx = -1; return; }
+    hlIdx = (hlIdx + step + items.length) % items.length;
+    items[hlIdx].classList.add('hl');
+    addInput.value = items[hlIdx].dataset.v;
+  }
+
+  function closeSuggest() {
+    if (suggestEl) { suggestEl.remove(); suggestEl = null; hlIdx = -1; }
   }
 
   function submitAdd() {
@@ -128,13 +194,108 @@ ET.views.day = (function () {
     });
   }
 
+  /* ---------- 今日提醒卡：过去还有未完成（聚合顺延入口） ---------- */
+  function buildOverdue() {
+    if (currentDate !== U.today()) return null;
+    const items = S.pendingBefore(U.today());
+    if (!items.length) return null;
+    const groups = [];
+    let last = null;
+    for (const t of items) {
+      if (!last || last.date !== t.date) { last = { date: t.date, items: [] }; groups.push(last); }
+      last.items.push(t);
+    }
+    const card = U.h('section', { class: 'card overdue-card', 'aria-label': '过去的未完成待办' });
+
+    const head = U.h('div', { class: 'od-head' },
+      U.h('button', {
+        class: 'od-toggle',
+        'aria-expanded': 'false',
+        onclick: (e) => {
+          const open = card.classList.toggle('open');
+          e.currentTarget.setAttribute('aria-expanded', String(open));
+        }
+      },
+        U.h('span', { class: 'od-badge' }, String(items.length)),
+        U.h('span', { class: 'od-title' }, '过去还有未完成'),
+        U.h('i', { class: 'od-arrow' })),
+      U.h('button', {
+        class: 'pill-btn od-all',
+        title: '把以下所有未完成移到今天（创建时间不变）',
+        onclick: () => {
+          const pairs = items.map((t) => [t, t.date]); /* 撤销需记住原日期 */
+          for (const [t] of pairs) S.moveTo(t.id, U.today());
+          ET.app.refresh();
+          U.toast('已把 ' + pairs.length + ' 条未完成移到今天', '撤销', () => {
+            for (const [t, d] of pairs) S.moveTo(t.id, d);
+            ET.app.refresh();
+          });
+        }
+      }, '全部移到今天'));
+
+    const list = U.h('ul', { class: 'od-list' }, groups.map((g) =>
+      U.h('li', { class: 'od-group' },
+        U.h('span', { class: 'od-date' }, U.fmtDay(g.date) + ' ' + U.weekShort(g.date)),
+        U.h('ul', null, g.items.map((t) =>
+          U.h('li', { class: 'od-item' },
+            U.h('span', { class: 'od-t' }, t.title),
+            U.h('button', {
+              class: 'mini-btn move', 'aria-label': '移到今天', title: '移到今天（创建时间不变）',
+              onclick: () => {
+                const origin = t.date;
+                S.moveTo(t.id, U.today());
+                ET.app.refresh();
+                U.toast('已移到今天「' + t.title + '」', '撤销', () => {
+                  S.moveTo(t.id, origin);
+                  ET.app.refresh();
+                });
+              }
+            }, U.svgEl(ICONS.moveToday))))))));
+    card.append(head, list);
+    return card;
+  }
+
   /* ---------- 列表 ---------- */
   function buildList() {
     const card = U.h('section', { class: 'card list-card', 'aria-label': '待办清单' });
     listInner = U.h('ul', { class: 'list' });
     card.append(listInner);
+    listInner.addEventListener('dragover', onDragOver);
+    listInner.addEventListener('drop', onDrop);
+    listInner.addEventListener('dragleave', () => clearDropMarks());
     renderItems();
     return card;
+  }
+
+  /* ---------- 拖拽排序（仅未完成条目，手动顺序持久化） ---------- */
+  let dragId = null;
+
+  function onDragOver(e) {
+    const row = e.target.closest && e.target.closest('.todo:not(.done):not(.dragging)');
+    if (!row || !dragId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const r = row.getBoundingClientRect();
+    const place = e.clientY < r.top + r.height / 2 ? 'above' : 'below';
+    clearDropMarks();
+    row.classList.add(place === 'above' ? 'drop-above' : 'drop-below');
+  }
+
+  function onDrop(e) {
+    const row = e.target.closest && e.target.closest('.todo:not(.done):not(.dragging)');
+    clearDropMarks();
+    if (!row || !dragId) return;
+    e.preventDefault();
+    const r = row.getBoundingClientRect();
+    const place = e.clientY < r.top + r.height / 2 ? 'before' : 'after';
+    S.reorder(dragId, row.dataset.id, place);
+    dragId = null;
+    refreshList(false);
+  }
+
+  function clearDropMarks() {
+    listInner.querySelectorAll('.drop-above, .drop-below')
+      .forEach((el) => el.classList.remove('drop-above', 'drop-below'));
   }
 
   function renderItems() {
@@ -185,6 +346,22 @@ ET.views.day = (function () {
       dataset: { id: t.id, flipId: t.id },
       style: '--cc:' + colorOf(t.id)
     }, U.h('i', { class: 'tick' }), check, title);
+
+    /* 拖拽排序：仅未完成项（过去锁定态除外） */
+    if (!t.done && (!isPast || backfill)) {
+      row.draggable = true;
+      row.addEventListener('dragstart', (e) => {
+        dragId = t.id;
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', t.id);
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('dragging');
+        clearDropMarks();
+        dragId = null;
+      });
+    }
 
     row.append(buildActs(row, t));
     return row;
