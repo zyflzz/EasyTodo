@@ -1,0 +1,343 @@
+/* ============================================================
+   EasyTodo · stats.css
+   数据统计页：全屏覆盖层 · KPI 概览 · 手写 SVG 图表 · 热力图 · tooltip
+   颜色全部走主题变量，6 套莫兰迪主题自动适配
+   ============================================================ */
+
+/* ---------- 页面骨架 ---------- */
+#stats-page {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  overflow-y: auto;
+  background: var(--bg);
+  animation: sp-page .3s var(--ease);
+}
+@keyframes sp-page {
+  from { opacity: 0; transform: translateY(10px); }
+}
+
+.sp-top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 62%, transparent);
+}
+.sp-top-in {
+  max-width: 1160px;
+  margin: 0 auto;
+  height: 58px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.sp-back {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  transition: color var(--dur), border-color var(--dur), background-color var(--dur);
+}
+.sp-back:hover { color: var(--text); border-color: var(--border-strong); background: var(--surface-2); }
+.sp-back svg {
+  width: 15px; height: 15px;
+  fill: none; stroke: currentColor;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+.sp-title { font-size: 18px; font-weight: 650; letter-spacing: -.01em; }
+.sp-total {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-body {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 20px 20px 90px;
+}
+
+/* ---------- KPI 概览 ---------- */
+.sp-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.sp-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-1);
+  padding: 13px 15px 12px;
+  min-width: 0;
+}
+.sp-kpi .k {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  letter-spacing: .04em;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.sp-kpi .k i {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 2.5px;
+  background: var(--kc, var(--accent));
+}
+.sp-kpi b {
+  display: block;
+  margin-top: 7px;
+  font-size: 25px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+.sp-kpi b small { font-size: 12.5px; font-weight: 600; color: var(--text-3); letter-spacing: 0; }
+
+/* ---------- 图表卡片网格 ---------- */
+.sp-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.sp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-1);
+  padding: 16px 18px 14px;
+  min-width: 0;
+}
+.sp-card.wide { grid-column: 1 / -1; }
+.sp-card h3 { font-size: 14.5px; font-weight: 650; }
+.sp-sub { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+.sp-chart { margin-top: 10px; }
+.sp-chart svg { width: 100%; height: auto; display: block; }
+.sp-chart text {
+  fill: var(--text-3);
+  font-size: 10px;
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+}
+.sp-chart .gline { stroke: var(--border); stroke-width: 1; stroke-dasharray: 3 4; }
+.sp-nil { padding: 34px 0 30px; text-align: center; font-size: 12.5px; color: var(--text-3); }
+
+/* —— 趋势图（SVG 柱 + 平滑均线 + 渐变面积） —— */
+.sp-bar { fill: var(--accent); fill-opacity: .5; transition: fill-opacity .15s; cursor: default; }
+.sp-bar:hover { fill-opacity: 1; }
+.sp-line {
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sp-area { stroke: none; }
+
+/* —— 时段分布 —— */
+.sp-hbar { fill: var(--accent); fill-opacity: .34; transition: fill-opacity .15s; cursor: default; }
+.sp-hbar:hover { fill-opacity: .75; }
+.sp-hbar.hot { fill-opacity: 1; }
+
+/* —— 雷达图 —— */
+.sp-radar { max-width: 264px; margin: 2px auto 0; }
+.sp-radar .rline { fill: none; stroke: var(--border); }
+.sp-radar .spoke { stroke: var(--border); }
+.sp-radar .poly {
+  fill: var(--accent);
+  fill-opacity: .16;
+  stroke: var(--accent);
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+.sp-radar .dot { fill: var(--accent); cursor: default; }
+.sp-radar .lab { font-size: 10.5px; }
+
+/* —— 活动热力（GitHub 风格 div 网格） —— */
+.hm { display: flex; gap: 7px; }
+.hm-days {
+  flex: none;
+  display: grid;
+  grid-template-rows: repeat(7, 13px);
+  gap: 3px;
+  padding-top: 18px;
+  font-size: 9.5px;
+  color: var(--text-3);
+}
+.hm-days span { line-height: 13px; }
+.hm-scroll { flex: 1; min-width: 0; overflow-x: auto; padding-bottom: 2px; }
+.hm-inner { width: max-content; }
+.hm-months { position: relative; height: 16px; margin-bottom: 2px; font-size: 10px; color: var(--text-3); }
+.hm-months span { position: absolute; top: 0; white-space: nowrap; }
+.hm-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 13px);
+  gap: 3px;
+  width: max-content;
+}
+.hm-c { width: 13px; height: 13px; border-radius: 3px; }
+.hm-l0 { background: var(--surface-2); }
+.hm-l1 { background: color-mix(in srgb, var(--accent) 26%, var(--surface-2)); }
+.hm-l2 { background: color-mix(in srgb, var(--accent) 50%, var(--surface-2)); }
+.hm-l3 { background: color-mix(in srgb, var(--accent) 74%, var(--surface-2)); }
+.hm-l4 { background: var(--accent); }
+.hm-c.today { box-shadow: inset 0 0 0 1.4px var(--text-2); }
+.hm-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+.hm-legend i { width: 11px; height: 11px; border-radius: 3px; }
+
+/* —— 近 6 个月（div 柱） —— */
+.sp-mchart {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  height: 178px;
+  margin-top: 12px;
+  padding: 0 2px;
+}
+.sp-mcol {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+.sp-mval { font-size: 12px; font-weight: 650; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.sp-mcol.hot .sp-mval { color: var(--text); }
+.sp-mtrack { flex: 1; width: 100%; min-height: 0; display: flex; align-items: flex-end; justify-content: center; }
+.sp-mbar {
+  width: min(100%, 44px);
+  border-radius: 7px 7px 3px 3px;
+  background: color-mix(in srgb, var(--accent) 55%, var(--surface-2));
+  transition: filter .15s;
+  cursor: default;
+}
+.sp-mbar:hover { filter: brightness(1.08); }
+.sp-mcol.hot .sp-mbar { background: var(--accent); }
+.sp-mlab { font-size: 11px; color: var(--text-3); white-space: nowrap; }
+
+/* —— 积压年龄（分段横条） —— */
+.bl { display: flex; flex-direction: column; gap: 11px; margin-top: 16px; }
+.bl-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 10px;
+}
+.bl-lab { font-size: 12px; color: var(--text-2); white-space: nowrap; }
+.bl-track { height: 10px; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.bl-fill {
+  display: block;
+  height: 100%;
+  border-radius: 6px;
+  background: var(--bc, var(--accent));
+  transform-origin: 0 50%;
+  min-width: 2px;
+}
+.bl-num {
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-2);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- 入场动画（.sp-anim 且未开启"减弱动效"时生效） ---------- */
+.sp-anim .sp-bar, .sp-anim .sp-hbar {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: sp-bar .5s var(--ease) both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes sp-bar { from { transform: scaleY(0); } }
+.sp-anim .sp-mbar {
+  transform-origin: 50% 100%;
+  animation: sp-bar .55s var(--ease) both;
+  animation-delay: var(--d, 0s);
+}
+.sp-anim .bl-fill {
+  animation: sp-fillx .6s var(--ease) both;
+  animation-delay: var(--d, 0s);
+}
+@keyframes sp-fillx { from { transform: scaleX(0); } }
+.sp-anim .sp-area { animation: sp-fade .7s ease .35s both; }
+@keyframes sp-fade { from { opacity: 0; } }
+.sp-anim .hm-c { animation: sp-fade .3s ease both; animation-delay: var(--d, 0s); }
+
+/* ---------- tooltip（页面级单例，fixed 定位 + 视口夹紧） ---------- */
+.sp-tip {
+  position: fixed;
+  z-index: 95;
+  max-width: 260px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: nowrap;
+  box-shadow: var(--shadow-2);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity .12s ease, transform .12s ease;
+}
+.sp-tip.show { opacity: 1; transform: none; }
+
+/* ---------- 整页空状态 ---------- */
+.sp-empty {
+  min-height: calc(100vh - 58px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+  padding: 20px;
+  color: var(--text-3);
+}
+.sp-empty svg {
+  width: 46px; height: 46px;
+  margin-bottom: 8px;
+  fill: none; stroke: currentColor;
+  stroke-width: 1.5; stroke-linecap: round;
+  opacity: .55;
+}
+.sp-empty .t1 { font-size: 15px; color: var(--text-2); font-weight: 550; }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 900px) {
+  .sp-kpis { grid-template-columns: repeat(3, 1fr); }
+  .sp-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 560px) {
+  .sp-kpis { grid-template-columns: repeat(2, 1fr); }
+  .sp-kpi b { font-size: 21px; }
+  .sp-body { padding: 14px 12px 70px; }
+  .sp-top-in { padding: 0 12px; gap: 10px; }
+  .sp-title { font-size: 16px; }
+}

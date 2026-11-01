@@ -383,6 +383,11 @@
 
   /* ---------- 键盘快捷键 ---------- */
   document.addEventListener('keydown', (e) => {
+    /* 统计页打开时：Esc 返回，屏蔽视图/搜索等其余快捷键 */
+    if (ET.statsPage && ET.statsPage.isOpen()) {
+      if (e.key === 'Escape') ET.statsPage.close();
+      return;
+    }
     const tgt = e.target;
     const typing = tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA' || tgt.isContentEditable);
 
@@ -425,6 +430,7 @@
   /* ---------- 启动 ---------- */
   ET.theme.init();
   ET.rail.init();
+  if (ET.statsPage) ET.statsPage.init();
   render();
   /* 暴露给撤销等场景 */
   ET.app = { refresh: () => render() };
