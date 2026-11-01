@@ -59,6 +59,7 @@
 
     content.className = 'view view-' + state.view;
     ET.views[state.view].render(content, state);
+    if (ET.rail) ET.rail.renderAll(state);
 
     if (U.motionOK()) {
       content.animate(
@@ -99,16 +100,22 @@
   btnToday.addEventListener('click', () => ET.nav.today());
   tabButtons.forEach((b) => b.addEventListener('click', () => ET.nav.to(b.dataset.view)));
 
-  /* ---------- 日期跳转：点击标题弹出迷你月历 ---------- */
+  /* ---------- 日期跳转：窄屏点击标题弹出迷你月历（宽屏由左侧栏月历承担，避免重复入口） ---------- */
   const toolbarInner = $('.toolbar-inner');
   let jumpPop = null;
   let jumpMonth = null; /* 'YYYY-MM'，弹层内浏览的月份 */
 
-  periodTitle.classList.add('jumpy');
-  periodTitle.title = '点击选择日期';
-  periodTitle.addEventListener('click', openJumpPop);
+  const wideMq = matchMedia('(min-width: 1400px)');
+  function updateJumpy() {
+    const narrow = !wideMq.matches;
+    periodTitle.classList.toggle('jumpy', narrow);
+    periodTitle.title = narrow ? '点击选择日期' : '';
+  }
+  if (wideMq.addEventListener) wideMq.addEventListener('change', updateJumpy);
+  else if (wideMq.addListener) wideMq.addListener(updateJumpy);
+  updateJumpy();
+  periodTitle.addEventListener('click', () => { if (!wideMq.matches) openJumpPop(); });
 
-  function daysInMonth(y, m1) { return new Date(y, m1, 0).getDate(); }
   function shiftMonth(ym, delta) {
     let y = +ym.slice(0, 4), m = +ym.slice(5, 7) + delta;
     if (m < 1) { m = 12; y--; } else if (m > 12) { m = 1; y++; }
@@ -126,35 +133,17 @@
 
   function renderJumpMonth() {
     const y = +jumpMonth.slice(0, 4), m = +jumpMonth.slice(5, 7);
-    const firstDow = (new Date(y, m - 1, 1).getDay() + 6) % 7; /* 周一起始 */
-    const nDays = daysInMonth(y, m);
-    const prevN = daysInMonth(m === 1 ? y - 1 : y, m === 1 ? 12 : m - 1);
-    const nextM = shiftMonth(jumpMonth, 1);
     const curPeriod = period(state.view, state.date);
     const today = U.today();
 
-    const cells = [];
-    for (let i = 0; i < 42; i++) {
-      const dnum = i - firstDow + 1;
-      let ds, other = false;
-      if (dnum < 1) {
-        const d = prevN + dnum;
-        ds = shiftMonth(jumpMonth, -1) + '-' + String(d).padStart(2, '0');
-        other = true;
-      } else if (dnum > nDays) {
-        const d = dnum - nDays;
-        ds = nextM + '-' + String(d).padStart(2, '0');
-        other = true;
-      } else {
-        ds = jumpMonth + '-' + String(dnum).padStart(2, '0');
-      }
-      cells.push(U.h('button', {
+    /* 42 格计算复用侧栏的 monthCells（rail.js） */
+    const cells = ET.rail.monthCells(jumpMonth).map((c) =>
+      U.h('button', {
         type: 'button',
-        class: 'jc' + (other ? ' other' : '') + (ds === today ? ' today' : '') +
-          (period(state.view, ds) === curPeriod ? ' cur' : ''),
-        onclick: () => { ET.nav.to(state.view, ds); closeJumpPop(); }
-      }, String(+ds.slice(8))));
-    }
+        class: 'jc' + (c.other ? ' other' : '') + (c.ds === today ? ' today' : '') +
+          (period(state.view, c.ds) === curPeriod ? ' cur' : ''),
+        onclick: () => { ET.nav.to(state.view, c.ds); closeJumpPop(); }
+      }, String(c.num)));
 
     jumpPop.replaceChildren(
       U.h('div', { class: 'j-head' },
@@ -435,6 +424,7 @@
 
   /* ---------- 启动 ---------- */
   ET.theme.init();
+  ET.rail.init();
   render();
   /* 暴露给撤销等场景 */
   ET.app = { refresh: () => render() };
